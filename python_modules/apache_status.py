@@ -73,7 +73,7 @@ class UpdateApacheStatusThread(threading.Thread):
                     self.status[ Scoreboard_bykey[sck] ] += 1
             elif l.find("ReqPerSec:") == 0:
                 scline = l.split(": ", 1)[1].rstrip()
-                self.status["rps"] = float(scline)
+                self.status["ap_rps"] = float(scline)
         res.close()
 
     def status_of(self, name):
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         while True:
             for d in descriptors:
                 v = d['call_back'](d['name'])
-                if d['name'] == "rps":
+                if d['name'] == "ap_rps":
                     print 'value for %s is %.3f' % (d['name'], v)
                 else:
                     print 'value for %s is %u'   % (d['name'], v)
