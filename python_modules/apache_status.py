@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import urllib2
+import traceback
 
 descriptors = list()
 Desc_Skel   = {}
@@ -60,21 +61,27 @@ class UpdateApacheStatusThread(threading.Thread):
 
     def update_status(self):
         req = urllib2.Request(url = self.url)
+        # initialize
+        self.status = dict( [(k, 0) for k in Scoreboard.keys()] )
+
         if self.virtual_host:
             req.add_header('Host', self.virtual_host)
-        res = urllib2.urlopen(req)
+        try:
+            res = urllib2.urlopen(req)
 
-        self.status = dict( [(k, 0) for k in Scoreboard.keys()] ) # initialize
-        for l in res:
-            l = l.rstrip()
-            if l.find("Scoreboard:") == 0:
-                scline = l.split(": ", 1)[1].rstrip()
-                for sck in scline:
-                    self.status[ Scoreboard_bykey[sck] ] += 1
-            elif l.find("ReqPerSec:") == 0:
-                scline = l.split(": ", 1)[1].rstrip()
-                self.status["ap_rps"] = float(scline)
-        res.close()
+            for l in res:
+                l = l.rstrip()
+                if l.find("Scoreboard:") == 0:
+                    scline = l.split(": ", 1)[1].rstrip()
+                    for sck in scline:
+                        self.status[ Scoreboard_bykey[sck] ] += 1
+                elif l.find("ReqPerSec:") == 0:
+                    scline = l.split(": ", 1)[1].rstrip()
+                    self.status["ap_rps"] = float(scline)
+        except urllib2.URLError:
+            traceback.print_exc()
+        else:
+            res.close()
 
     def status_of(self, name):
         val = 0
