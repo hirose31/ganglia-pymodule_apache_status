@@ -7,6 +7,9 @@ import time
 import urllib2
 import traceback
 
+# global to store state for "total accesses"
+last_total_accesses = 0
+
 descriptors = list()
 Desc_Skel   = {}
 Scoreboard  = {
@@ -78,6 +81,22 @@ class UpdateApacheStatusThread(threading.Thread):
                 elif l.find("ReqPerSec:") == 0:
                     scline = l.split(": ", 1)[1].rstrip()
                     self.status["ap_rps"] = float(scline)
+                elif l.find("Total Accesses:") == 0:
+                    global last_total_accesses
+                    new_value = int(l.split(": ", 1)[1].rstrip())
+                    if (last_total_accesses == 0):
+                        # if we don't have a value from last time, record a 0,
+                        # otherwise we'll cause an enormous spike in the graph
+                        # by recording the total value of the counter
+                        self.status["ap_hits"] = 0
+                    else:
+                        # subtract counter's old value from the new value and
+                        # write it
+                        hits = new_value - last_total_accesses
+                        self.status["ap_hits"] = hits
+                    # store for next time
+                    last_total_accesses = new_value
+
         except urllib2.URLError:
             traceback.print_exc()
         else:
@@ -137,6 +156,15 @@ def metric_init(params):
                 "format"     : "%.3f",
                 "description": "request per second",
                 }))
+
+    descriptors.append(create_desc({
+                "name"       : "ap_hits",
+                "value_type" : "uint",
+                "units"      : "hits",
+                "format"     : "%u",
+                "description": "hits",
+                }))
+
 
     for k,v in Scoreboard.iteritems():
         descriptors.append(create_desc({
